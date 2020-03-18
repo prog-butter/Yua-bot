@@ -18,9 +18,13 @@ bot = commands.Bot(command_prefix='y!')
 #global vars
 TIMEOUT_EMOJI = ':alarm_clock:'
 CORRECT_ANSWER = ':o:'
+SKIPPED_QUESTION = ':fast_forward:'
 
 names = ['Yua', 'ゆあ', '結愛']
+
 curr_quiz_data = {}
+available_quizzes = ["poke_g1", "poke_g2", "poke_g3", "poke_g4", "poke_g5", "poke_g6", "poke_g7", "poke_g8"]
+quiz_should_run = True
 
 DEF_TIMEOUT_TIME = 15.0
 DEF_TIME_AFTER_ANSWER = 1.0 #how much more time to give after one player answers correctly
@@ -61,20 +65,25 @@ async def jikoshoukai(ctx):
 @bot.command(name='quiz', help='To play those sweet quizzes!')
 async def quiz(ctx, *args):
 	if len(args) == 0:
-		desc = "poke_g1, poke_g2, poke_g3, poke_g4, poke_g5"
+		desc = ''
+		for q in available_quizzes:
+			desc += '{} '.format(q)
 		embed_info = discord.Embed(title="**Yua's quizzes**", color=0x9b1c31)
 		embed_info.add_field(name=":flag_jp:", value=desc, inline=False)
 		await ctx.send(embed=embed_info)
-	elif args[0] == "poke_g1":
+	elif args[0] in available_quizzes:
 		#gen1 quiz
 		participants = {} #keep track of player score
 		already_answered = {} #to prevent from answering multiple times
-		num_q_to_ask = 3
+		global quiz_should_run
+		quiz_should_run = True
+		num_q_to_ask = 5
+		total_q_asked = 0
 		load_quiz_json(args[0]+'.json')
 		info_msg = 'Starting Pokemon Generation 1 Quiz\nFirst to {} points wins\n{}'.format(num_q_to_ask, curr_quiz_data['description'])
 		await ctx.send(info_msg)
 		deck = curr_quiz_data['deck']
-		for i in range(num_q_to_ask):
+		while quiz_should_run:
 			#stuff
 			already_answered = {}
 			#generate qestion
@@ -84,6 +93,7 @@ async def quiz(ctx, *args):
 			#embed_q.add_field(name=deck[index]['answers'][0], value=deck[index]['answers'][1])
 			embed_q.set_thumbnail(url=deck[index]['question'])
 			await ctx.send(embed=embed_q)
+			total_q_asked += 1
 
 			#wait for answer
 			q_answered = False
@@ -97,16 +107,26 @@ async def quiz(ctx, *args):
 
 					#show timeout message
 					time_left = 0
-					if q_answered == False:
+					if q_answered == False and quiz_should_run:
 						embed_to = discord.Embed(title=TIMEOUT_EMOJI+' **Timed out**', color=discord.Colour.red())
 						embed_to.add_field(name=deck[index]['answers'][0], value=deck[index]['answers'][1])
 						await ctx.send(embed=embed_to)
 				else:
+					#received a message
+					if ans.content.lower() == 'stop!': #stop the quiz
+						time_left = 0
+						quiz_should_run = False
+						continue
+					if ans.content.lower() == '..': #skip this question
+						time_left = 0.1
+						embed_skip = discord.Embed(title=SKIPPED_QUESTION+' **Skipped**', color=discord.Colour.dark_blue())
+						embed_skip.add_field(name=deck[index]['answers'][0], value=deck[index]['answers'][1])
+						await ctx.send(embed=embed_skip)
 					#received an answer
 					for answer in deck[index]['answers']:
 						if ans.content.lower() == answer.lower(): #change to lowercase before check
 							#correct answer - give points
-							print('Gave points')
+							print('Gave a point to {}'.format(ans.author))
 							author_name = str(ans.author)
 							if author_name not in already_answered:
 								already_answered[author_name] = 1 #answered this question
@@ -131,15 +151,29 @@ async def quiz(ctx, *args):
 					temp_val += ('**{}** {}p '.format(part[:part.index('#')], participants[part]))
 				embed_ca.add_field(name='Scorers - {} to {}'.format(args[0], num_q_to_ask), value=temp_val)
 				await ctx.send(embed=embed_ca)
+
+			#check if quiz is over or not
+			if len(participants) > 0:
+				max_points = max(participants, key=participants.get)
+				if participants[max_points] >= num_q_to_ask:
+					quiz_should_run = False
+
 		#final results of current quiz
 		embed_res = discord.Embed(title='Final Scoreboard: {}'.format(args[0]), description='-------------------------------', color=0x0)
 		player_str = ''
 		for part in participants:
 			player_str += ('**{}** {}p\n'.format(part[:part.index('#')], participants[part]))
-		embed_res.add_field(name='Participants', value=player_str)
+		if player_str == '':
+			player_str = 'No participants'
+		embed_res.add_field(name='Participants (Questions asked: {})'.format(total_q_asked), value=player_str)
 		await ctx.send(embed=embed_res)
 		#update and display leaderboards
 		lb = {}
+		#create lb file if doesn't exist
+		if (os.path.exists(args[0]+'_lb.json')) is False:
+			with open(args[0]+'_lb.json', 'w') as f:
+				pass
+
 		with open(args[0]+'_lb.json', 'r') as f:
 			try:
 				lb = json.load(f)
@@ -152,6 +186,7 @@ async def quiz(ctx, *args):
 					lb[part] += participants[part]
 		with open(args[0]+'_lb.json', 'w') as f:
 			json.dump(lb, f)
+
 		embed_lb = discord.Embed(title='Leaderboard for {}'.format(args[0]), color=0xffdf00)
 		top_ten = []
 		orig_lb = lb.copy()
