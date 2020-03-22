@@ -77,10 +77,13 @@ async def quiz(ctx, *args):
 		already_answered = {} #to prevent from answering multiple times
 		global quiz_should_run
 		quiz_should_run = True
-		num_q_to_ask = 5
+		num_q_to_ask = 10
+		if len(args) > 1:
+			num_q_to_ask = int(args[1])
 		total_q_asked = 0
 		load_quiz_json(args[0]+'.json')
-		info_msg = 'Starting Pokemon Generation 1 Quiz\nFirst to {} points wins\n{}'.format(num_q_to_ask, curr_quiz_data['description'])
+		info_msg = 'Starting Pokemon Generation {} Quiz\nFirst to {} points wins\n{}'.format(args[0][-1], num_q_to_ask, curr_quiz_data['description'])
+		print('Starting Pokemon Generation {} Quiz'.format(args[0][-1]))
 		await ctx.send(info_msg)
 		deck = curr_quiz_data['deck']
 		while quiz_should_run:
