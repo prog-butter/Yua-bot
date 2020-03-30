@@ -19,6 +19,9 @@ bot = commands.Bot(command_prefix='y!')
 TIMEOUT_EMOJI = ':alarm_clock:'
 CORRECT_ANSWER = ':o:'
 SKIPPED_QUESTION = ':fast_forward:'
+GOLD_MEDAL = ':first_place:'
+SILVER_MEDAL = ':second_place:'
+BRONZE_MEDAL = ':third_place:'
 
 names = ['Yua', 'ゆあ', '結愛']
 
@@ -197,11 +200,17 @@ async def quiz(ctx, *args):
 			keyToDel = max(lb, key=lb.get)
 			top_ten.append(keyToDel)
 			lb[keyToDel] = 0
+		name = ''
 		for i in range(min(len(top_ten), 10)):
-			if (i+1) % 4 != 0:
-				embed_lb.add_field(name='{}. {}'.format(i+1, top_ten[i]), value=orig_lb[top_ten[i]], inline=True)
+			if i == 0:
+				name = '{}. {} {}'.format(i+1, top_ten[i], GOLD_MEDAL)
+			elif i == 1:
+				name = '{}. {} {}'.format(i+1, top_ten[i], SILVER_MEDAL)
+			elif i == 2:
+				name = '{}. {} {}'.format(i+1, top_ten[i], BRONZE_MEDAL)
 			else:
-				embed_lb.add_field(name='{}. {}'.format(i+1, top_ten[i]), value=orig_lb[top_ten[i]], inline=False)
+				name = '{}. {}'.format(i+1, top_ten[i])
+			embed_lb.add_field(name=name, value=orig_lb[top_ten[i]], inline=True)
 		await ctx.send(embed=embed_lb)
 
 	else:
