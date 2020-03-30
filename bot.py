@@ -84,7 +84,8 @@ async def quiz(ctx, *args):
 		if len(args) > 1:
 			num_q_to_ask = int(args[1])
 		total_q_asked = 0
-		load_quiz_json(args[0]+'.json')
+		qpath = 'data\\'+args[0]+'.json'
+		load_quiz_json(qpath)
 		info_msg = 'Starting Pokemon Generation {} Quiz\nFirst to {} points wins\n{}'.format(args[0][-1], num_q_to_ask, curr_quiz_data['description'])
 		print('Starting Pokemon Generation {} Quiz'.format(args[0][-1]))
 		await ctx.send(info_msg)
@@ -176,11 +177,26 @@ async def quiz(ctx, *args):
 		#update and display leaderboards
 		lb = {}
 		#create lb file if doesn't exist
-		if (os.path.exists(args[0]+'_lb.json')) is False:
-			with open(args[0]+'_lb.json', 'w') as f:
+		gName = ctx.guild.name
+		gName = gName.replace("<", "")
+		gName = gName.replace(">", "")
+		gName = gName.replace(":", "")
+		gName = gName.replace("\"", "")
+		gName = gName.replace("/", "")
+		gName = gName.replace("\\", "")
+		gName = gName.replace("|", "")
+		gName = gName.replace("?", "")
+		gName = gName.replace("*", "")
+		gName = gName.replace(" ", "")
+		lbfolderpath = 'data\\lb\\'+gName
+		if (os.path.exists(lbfolderpath)) is False:
+			os.makedirs(lbfolderpath)
+		lbpath = 'data\\lb\\'+gName+'\\'+args[0]+'_lb.json'
+		if (os.path.exists(lbpath)) is False:
+			with open(lbpath, 'w') as f:
 				pass
 
-		with open(args[0]+'_lb.json', 'r') as f:
+		with open(lbpath, 'r') as f:
 			try:
 				lb = json.load(f)
 			except JSONDecodeError:
@@ -190,7 +206,7 @@ async def quiz(ctx, *args):
 					lb[part] = participants[part]
 				else:
 					lb[part] += participants[part]
-		with open(args[0]+'_lb.json', 'w') as f:
+		with open(lbpath, 'w') as f:
 			json.dump(lb, f)
 
 		embed_lb = discord.Embed(title='Leaderboard for {}'.format(args[0]), color=0xffdf00)
